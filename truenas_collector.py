@@ -38,8 +38,14 @@ class TrueNasCollector(object):
     def collect(self):
         metrics = []
         for collection in self._collections(): 
+            print(f"Collection: self.{collection}()")
             """ Collect metrics from all the _collect functions """
-            metrics = eval(f"self.{collection}()")
+
+            try:
+                metrics = eval(f"self.{collection}()")
+            except Exception as exc:
+                print(f"Failed to process self.{collection}()")
+                print(exc)
             for metric in metrics:
                 """ Return all the metrics """
                 yield metric
@@ -581,6 +587,7 @@ class TrueNasCollector(object):
 
     @systeminfo_timer.time()
     def _collect_system_info(self):
+        print("DEBUG: Collect system info")
         info = self.request('system/info')
         network = self.request('network/configuration')
 
