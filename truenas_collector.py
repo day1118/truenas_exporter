@@ -624,12 +624,15 @@ class TrueNasCollector(object):
             [info['hostname']],
             info['physmem']
         )
+        # 'license' is null on non-enterprise TrueNAS SCALE; fall back to the
+        # top-level system fields so the rest of system info is still exported.
+        license_info = info.get('license') or {}
         infolabels = {
             'hostname': info['hostname'],
             'version': info['version'],
-            'serial': info['license']['system_serial'],
-            'serial_ha': info['license']['system_serial_ha'],
-            'model': info['license']['model'],
+            'serial': license_info.get('system_serial') or info.get('system_serial') or '',
+            'serial_ha': license_info.get('system_serial_ha') or '',
+            'model': license_info.get('model') or info.get('model') or '',
             'product': info['system_product'],
             'manufacturer': info['system_manufacturer']
         }
@@ -637,13 +640,18 @@ class TrueNasCollector(object):
             infolabels.keys(),
             infolabels
         )
+        # HA fields only exist on enterprise HA systems; default them so non-HA SCALE reports 0.
+        hostname_a = network.get('hostname') or ''
+        hostname_b = network.get('hostname_b') or ''
+        hostname_virtual = network.get('hostname_virtual')
+        hostname_local = network.get('hostname_local')
         ha_status = 0
-        if network['hostname_virtual'] and network['hostname_local'] == network['hostname']:
+        if hostname_virtual and hostname_local == hostname_a:
             ha_status = 1
-        elif network['hostname_virtual'] and network['hostname_local'] == network['hostname_b']:
+        elif hostname_virtual and hostname_local == hostname_b:
             ha_status = 2
         ha.add_metric(
-            [info['hostname'], network['hostname'], network['hostname_b']],
+            [info['hostname'], hostname_a, hostname_b],
             ha_status
         )
 
